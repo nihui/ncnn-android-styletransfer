@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">styletransferncnn</string>
+    <string-array name="style_array">
+        <item>candy</item>
+        <item>mosaic</item>
+        <item>pointilism</item>
+        <item>rain_princess</item>
+        <item>udnie</item>
+    </string-array>
+</resources>
