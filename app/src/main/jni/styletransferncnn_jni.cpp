@@ -143,13 +143,10 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     int width = info.width;
     int height = info.height;
 
-    void* indata;
-    AndroidBitmap_lockPixels(env, bitmap, &indata);
-
     const int downscale_ratio = 2;
 
     // ncnn from bitmap
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize((const unsigned char*)indata, ncnn::Mat::PIXEL_RGBA2RGB, width, height, width / downscale_ratio, height / downscale_ratio);
+    ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_RGB, width / downscale_ratio, height / downscale_ratio);
 
     // styletransfer
     ncnn::Mat out;
@@ -164,24 +161,7 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     }
 
     // ncnn to bitmap
-    ncnn::Mat out_rgb(width, height, (size_t)3u, 3);
-    out.to_pixels_resize((unsigned char*)out_rgb.data, ncnn::Mat::PIXEL_RGB, width, height);
-
-    // fill
-    const unsigned char* p0 = out_rgb;
-    unsigned char* p1 = (unsigned char*)indata;
-    for (int i=0; i<width*height; i++)
-    {
-        p1[0] = p0[0];
-        p1[1] = p0[1];
-        p1[2] = p0[2];
-        p1[3] = 255;
-
-        p0 += 3;
-        p1 += 4;
-    }
-
-    AndroidBitmap_unlockPixels(env, bitmap);
+    out.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
 
     bench_end("styletransfer");
 
