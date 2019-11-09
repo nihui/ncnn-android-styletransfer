@@ -14,10 +14,6 @@ android {
         minSdkVersion 24
     }
 
-    aaptOptions {
-        noCompress 'bin'
-    }
-
     buildTypes {
         release {
             minifyEnabled false

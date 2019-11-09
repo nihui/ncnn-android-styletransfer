@@ -13,7 +13,6 @@
 // specific language governing permissions and limitations under the License.
 
 #include <android/asset_manager_jni.h>
-#include <android/asset_manager.h>
 #include <android/bitmap.h>
 #include <android/log.h>
 
@@ -46,32 +45,6 @@ static void bench_end(const char* comment)
     elasped = ((tv_end.tv_sec - tv_begin.tv_sec) * 1000000.0f + tv_end.tv_usec - tv_begin.tv_usec) / 1000.0f;
 //     fprintf(stderr, "%.2fms   %s\n", elasped, comment);
     __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "%.2fms   %s", elasped, comment);
-}
-
-static int load_net_from_asset(ncnn::Net& net, AAssetManager* mgr, const char* model_path)
-{
-    // load param
-    int ret0 = net.load_param(styletransfer_param_bin);
-
-    // load bin
-    AAsset* asset = AAssetManager_open(mgr, model_path, AASSET_MODE_STREAMING);
-
-    off_t start;
-    off_t length;
-    int fd = AAsset_openFileDescriptor(asset, &start, &length);
-
-    FILE* fp = fdopen(fd, "rb");
-    fseek(fp, start, SEEK_CUR);
-
-    int ret1 = net.load_model(fp);
-
-    fclose(fp);// it will close fd too
-
-    AAsset_close(asset);
-
-    __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load_net_from_asset %d %d %d", ret0, ret1, (int)length);
-
-    return 0;
 }
 
 static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
@@ -117,8 +90,10 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     {
         styletransfernet[i].opt = opt;
 
-        if (load_net_from_asset(styletransfernet[i], mgr, model_paths[i]) != 0)
-            return JNI_FALSE;
+        int ret0 = styletransfernet[i].load_param(styletransfer_param_bin);
+        int ret1 = styletransfernet[i].load_model(mgr, model_paths[i]);
+
+        __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
     }
 
     return JNI_TRUE;
