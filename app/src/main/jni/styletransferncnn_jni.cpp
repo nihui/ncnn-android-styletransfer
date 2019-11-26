@@ -23,29 +23,10 @@
 
 // ncnn
 #include "net.h"
+#include "benchmark.h"
 
 #include "styletransfer.id.h"
 #include "styletransfer.param.bin.h"
-
-#include <sys/time.h>
-#include <unistd.h>
-
-static struct timeval tv_begin;
-static struct timeval tv_end;
-static double elasped;
-
-static void bench_start()
-{
-    gettimeofday(&tv_begin, NULL);
-}
-
-static void bench_end(const char* comment)
-{
-    gettimeofday(&tv_end, NULL);
-    elasped = ((tv_end.tv_sec - tv_begin.tv_sec) * 1000000.0f + tv_end.tv_usec - tv_begin.tv_usec) / 1000.0f;
-//     fprintf(stderr, "%.2fms   %s\n", elasped, comment);
-    __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "%.2fms   %s", elasped, comment);
-}
 
 static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
 static ncnn::PoolAllocator g_workspace_pool_allocator;
@@ -108,7 +89,7 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     if (use_gpu == JNI_TRUE && ncnn::get_gpu_count() == 0)
         return JNI_FALSE;
 
-    bench_start();
+    double start_time = ncnn::get_current_time();
 
     AndroidBitmapInfo info;
     AndroidBitmap_getInfo(env, bitmap, &info);
@@ -138,7 +119,8 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     // ncnn to bitmap
     out.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
 
-    bench_end("styletransfer");
+    double elasped = ncnn::get_current_time() - start_time;
+    __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "%.2fms   styletransfer", elasped);
 
     return JNI_TRUE;
 }

@@ -25,10 +25,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
 add_library(styletransferncnn SHARED styletransferncnn_jni.cpp)
 
 target_link_libraries(styletransferncnn
-	ncnn
-	android
-	z
-	log
-	jnigraphics
-	vulkan
+    ncnn
+    android
+    z
+    log
+    jnigraphics
+    vulkan
 )
