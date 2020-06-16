@@ -8,6 +8,15 @@ add_library(ncnn STATIC IMPORTED)
 set_target_properties(ncnn PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/${ANDROID_ABI}/libncnn.a)
 include_directories(${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/include/ncnn)
 
+add_library(glslang STATIC IMPORTED)
+add_library(OGLCompiler STATIC IMPORTED)
+add_library(OSDependent STATIC IMPORTED)
+add_library(SPIRV STATIC IMPORTED)
+set_target_properties(glslang PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/${ANDROID_ABI}/libglslang.a)
+set_target_properties(OGLCompiler PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/${ANDROID_ABI}/libOGLCompiler.a)
+set_target_properties(OSDependent PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/${ANDROID_ABI}/libOSDependent.a)
+set_target_properties(SPIRV PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/ncnn-android-vulkan-lib/${ANDROID_ABI}/libSPIRV.a)
+
 # openmp
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -30,6 +39,9 @@ add_library(styletransferncnn SHARED styletransferncnn_jni.cpp)
 
 target_link_libraries(styletransferncnn
     ncnn
+
+    glslang SPIRV OGLCompiler OSDependent
+
     android
     z
     log
