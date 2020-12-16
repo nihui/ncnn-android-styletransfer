@@ -27,8 +27,12 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Spinner;
+import android.media.ExifInterface;
+import android.graphics.Matrix;
 
 import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.IOException;
 
 public class MainActivity extends Activity
 {
@@ -178,7 +182,34 @@ public class MainActivity extends Activity
         // Decode with inSampleSize
         BitmapFactory.Options o2 = new BitmapFactory.Options();
         o2.inSampleSize = scale;
-        return BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o2);
+        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o2);
+
+        // Rotate according to EXIF
+        int rotate = 0;
+        try
+        {
+            ExifInterface exif = new ExifInterface(getContentResolver().openInputStream(selectedImage));
+            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotate = 270;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotate = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotate = 90;
+                    break;
+            }
+        }
+        catch (IOException e)
+        {
+            Log.e("MainActivity", "ExifInterface IOException");
+        }
+
+        Matrix matrix = new Matrix();
+        matrix.postRotate(rotate);
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
 
 }
