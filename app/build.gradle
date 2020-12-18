@@ -6,22 +6,18 @@ android {
 
     defaultConfig {
         applicationId "com.tencent.styletransferncnn"
+        archivesBaseName = "$applicationId"
 
         ndk {
             moduleName "ncnn"
-            abiFilters 'armeabi-v7a', 'arm64-v8a'
+            abiFilters "armeabi-v7a", "arm64-v8a"
         }
         minSdkVersion 24
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
-        }
-    }
     externalNativeBuild {
         cmake {
+            version "3.10.2"
             path file('src/main/jni/CMakeLists.txt')
         }
     }
