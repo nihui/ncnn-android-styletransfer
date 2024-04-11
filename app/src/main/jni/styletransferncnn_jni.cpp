@@ -28,10 +28,8 @@
 #include "styletransfer.id.h"
 #include "styletransfer.param.bin.h"
 
-static ncnn::UnlockedPoolAllocator g_blob_pool_allocator;
-static ncnn::PoolAllocator g_workspace_pool_allocator;
-
 static ncnn::Net styletransfernet[5];
+static ncnn::Net styletransfernet_gpu[5];
 
 extern "C" {
 
@@ -55,14 +53,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved)
 JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_Init(JNIEnv* env, jobject thiz, jobject assetManager)
 {
     ncnn::Option opt;
-    opt.lightmode = true;
-    opt.num_threads = 4;
-    opt.blob_allocator = &g_blob_pool_allocator;
-    opt.workspace_allocator = &g_workspace_pool_allocator;
-
-    // use vulkan compute
-    if (ncnn::get_gpu_count() != 0)
-        opt.use_vulkan_compute = true;
 
     AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
 
@@ -75,6 +65,20 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
         int ret1 = styletransfernet[i].load_model(mgr, model_paths[i]);
 
         __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
+    }
+
+    // use vulkan compute
+    if (ncnn::get_gpu_count() != 0)
+    {
+        for (int i=0; i<5; i++)
+        {
+            styletransfernet_gpu[i].opt.use_vulkan_compute = true;
+
+            int ret0 = styletransfernet_gpu[i].load_param(styletransfer_param_bin);
+            int ret1 = styletransfernet_gpu[i].load_model(mgr, model_paths[i]);
+
+            __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
+        }
     }
 
     return JNI_TRUE;
@@ -107,9 +111,7 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     // styletransfer
     ncnn::Mat out;
     {
-        ncnn::Extractor ex = styletransfernet[style_type].create_extractor();
-
-        ex.set_vulkan_compute(use_gpu);
+        ncnn::Extractor ex = use_gpu ? styletransfernet_gpu[style_type].create_extractor() : styletransfernet[style_type].create_extractor();
 
         ex.input(styletransfer_param_id::BLOB_input1, in);
 
