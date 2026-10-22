@@ -8,4 +8,9 @@
         <item>rain_princess</item>
         <item>udnie</item>
     </string-array>
+    <string-array name="gpu_array">
+        <item>GPU</item>
+        <item>turnip</item>
+        <item>momoten</item>
+    </string-array>
 </resources>

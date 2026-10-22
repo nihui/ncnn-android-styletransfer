@@ -18,6 +18,7 @@
 
 #include <jni.h>
 
+#include <string.h>
 #include <string>
 #include <vector>
 
@@ -29,15 +30,14 @@
 #include "styletransfer.param.bin.h"
 
 static ncnn::Net styletransfernet[5];
-static ncnn::Net styletransfernet_gpu[5];
+static ncnn::Net* styletransfernet_gpu = 0;
+static ncnn::Mutex lock;
 
 extern "C" {
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
 {
     __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "JNI_OnLoad");
-
-    ncnn::create_gpu_instance();
 
     return JNI_VERSION_1_4;
 }
@@ -46,12 +46,18 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved)
 {
     __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "JNI_OnUnload");
 
+    ncnn::MutexLockGuard g(lock);
+
+    delete[] styletransfernet_gpu;
+    styletransfernet_gpu = 0;
     ncnn::destroy_gpu_instance();
 }
 
 // public native boolean Init(AssetManager mgr);
 JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_Init(JNIEnv* env, jobject thiz, jobject assetManager)
 {
+    ncnn::MutexLockGuard g(lock);
+
     ncnn::Option opt;
 
     AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
@@ -67,9 +73,73 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
         __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
     }
 
+    return JNI_TRUE;
+}
+
+// public native boolean InitGPU(AssetManager mgr, int driver);
+JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_InitGPU(JNIEnv* env, jobject thiz, jobject assetManager, jint driver)
+{
+    if (driver < 0 || driver > 2)
+        return JNI_FALSE;
+
+    ncnn::MutexLockGuard g(lock);
+
+    static int old_driver = -1;
+    if (driver == old_driver)
+        return JNI_TRUE;
+
+    // The old Net must be destroyed before switching drivers.
+    delete[] styletransfernet_gpu;
+    styletransfernet_gpu = 0;
+    ncnn::destroy_gpu_instance();
+    old_driver = -1;
+
+    if (driver == 2)
+    {
+        if (ncnn::create_gpu_instance("libmomoten.so") != 0)
+        {
+            ncnn::destroy_gpu_instance();
+            return JNI_FALSE;
+        }
+
+        ncnn::VulkanDevice* vkdev = ncnn::get_gpu_device();
+        if (!vkdev || !vkdev->is_valid()
+            || (strcmp(vkdev->info.driver_name(), "momoten") != 0 && strncmp(vkdev->info.device_name(), "momoten: ", 9) != 0))
+        {
+            // simplevk may fall back to another driver.
+            ncnn::destroy_gpu_instance();
+            return JNI_FALSE;
+        }
+    }
+    else if (driver == 1)
+    {
+        if (ncnn::create_gpu_instance("libvulkan_freedreno.so") != 0)
+        {
+            ncnn::destroy_gpu_instance();
+            return JNI_FALSE;
+        }
+
+        ncnn::VulkanDevice* vkdev = ncnn::get_gpu_device();
+        if (!vkdev || !vkdev->is_valid() || strcmp(vkdev->info.driver_name(), "turnip") != 0)
+        {
+            // simplevk may fall back to another driver.
+            ncnn::destroy_gpu_instance();
+            return JNI_FALSE;
+        }
+    }
+    else
+    {
+        ncnn::create_gpu_instance();
+    }
+
+    AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
+
+    const char* model_paths[5] = {"candy.bin", "mosaic.bin", "pointilism.bin", "rain_princess.bin", "udnie.bin"};
+
     // use vulkan compute
     if (ncnn::get_gpu_count() != 0)
     {
+        styletransfernet_gpu = new ncnn::Net[5];
         for (int i=0; i<5; i++)
         {
             styletransfernet_gpu[i].opt.use_vulkan_compute = true;
@@ -78,19 +148,31 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
             int ret1 = styletransfernet_gpu[i].load_model(mgr, model_paths[i]);
 
             __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
+            if (ret0 != 0 || ret1 != 0)
+            {
+                delete[] styletransfernet_gpu;
+                styletransfernet_gpu = 0;
+                return JNI_FALSE;
+            }
         }
     }
 
+    if (!styletransfernet_gpu)
+        return JNI_FALSE;
+
+    old_driver = driver;
     return JNI_TRUE;
 }
 
 // public native Bitmap StyleTransfer(Bitmap bitmap, int style_type, boolean use_gpu);
 JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_StyleTransfer(JNIEnv* env, jobject thiz, jobject bitmap, jint style_type, jboolean use_gpu)
 {
+    ncnn::MutexLockGuard g(lock);
+
     if (style_type < 0 || style_type >= 5)
         return JNI_FALSE;
 
-    if (use_gpu == JNI_TRUE && ncnn::get_gpu_count() == 0)
+    if (use_gpu == JNI_TRUE && !styletransfernet_gpu)
         return JNI_FALSE;
 
     double start_time = ncnn::get_current_time();

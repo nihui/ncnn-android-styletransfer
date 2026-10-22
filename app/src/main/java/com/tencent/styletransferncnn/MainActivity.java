@@ -61,6 +61,23 @@ public class MainActivity extends Activity
 
         imageView = (ImageView) findViewById(R.id.imageView);
 
+        Spinner spinnerGPU = (Spinner) findViewById(R.id.spinnerGPU);
+        spinnerGPU.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                boolean ret = styletransferncnn.InitGPU(getAssets(), pos);
+                Button buttonDetectGPU = (Button) findViewById(R.id.buttonDetectGPU);
+                buttonDetectGPU.setEnabled(ret);
+                if (!ret)
+                {
+                    Log.e("MainActivity", "styletransferncnn InitGPU failed");
+                }
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
         Button buttonImage = (Button) findViewById(R.id.buttonImage);
         buttonImage.setOnClickListener(new View.OnClickListener() {
             @Override

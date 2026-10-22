@@ -21,6 +21,8 @@ public class StyleTransferNcnn
 {
     public native boolean Init(AssetManager mgr);
 
+    public native boolean InitGPU(AssetManager mgr, int driver);
+
     public native boolean StyleTransfer(Bitmap bitmap, int style_type, boolean use_gpu);
 
     static {
