@@ -30,6 +30,8 @@ import android.widget.Spinner;
 import android.media.ExifInterface;
 import android.graphics.Matrix;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.IOException;
@@ -156,6 +158,32 @@ public class MainActivity extends Activity
         return styledImage;
     }
 
+    private int readExifOrientation(Uri selectedImage) throws IOException
+    {
+        // The InputStream constructor requires API 24. Use a private temporary
+        // file so content URIs also work with the API 21 filename constructor.
+        File file = File.createTempFile("exif", ".tmp", getCacheDir());
+        try
+        {
+            try (InputStream input = getContentResolver().openInputStream(selectedImage);
+                 FileOutputStream output = new FileOutputStream(file))
+            {
+                if (input == null)
+                    throw new IOException("Unable to open selected image");
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1)
+                    output.write(buffer, 0, count);
+            }
+            ExifInterface exif = new ExifInterface(file.getAbsolutePath());
+            return exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+        }
+        finally
+        {
+            file.delete();
+        }
+    }
+
     private Bitmap decodeUri(Uri selectedImage) throws FileNotFoundException
     {
         // Decode image size
@@ -188,8 +216,7 @@ public class MainActivity extends Activity
         int rotate = 0;
         try
         {
-            ExifInterface exif = new ExifInterface(getContentResolver().openInputStream(selectedImage));
-            int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int orientation = readExifOrientation(selectedImage);
             switch (orientation) {
                 case ExifInterface.ORIENTATION_ROTATE_270:
                     rotate = 270;
