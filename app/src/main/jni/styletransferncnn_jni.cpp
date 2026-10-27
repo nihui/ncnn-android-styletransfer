@@ -24,6 +24,7 @@
 
 // ncnn
 #include "net.h"
+#include "datareader.h"
 #include "benchmark.h"
 
 #include "styletransfer.id.h"
@@ -67,7 +68,9 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
     {
         styletransfernet[i].opt = opt;
 
-        int ret0 = styletransfernet[i].load_param(styletransfer_param_bin);
+        const unsigned char* param_ptr = styletransfer_param_bin;
+        ncnn::DataReaderFromMemory param_reader(param_ptr, sizeof(styletransfer_param_bin));
+        int ret0 = styletransfernet[i].load_param_bin(param_reader);
         int ret1 = styletransfernet[i].load_model(mgr, model_paths[i]);
 
         __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);
@@ -132,7 +135,9 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_styletransferncnn_StyleTransferNcnn_
         {
             styletransfernet_gpu[i].opt.use_vulkan_compute = true;
 
-            int ret0 = styletransfernet_gpu[i].load_param(styletransfer_param_bin);
+            const unsigned char* param_ptr = styletransfer_param_bin;
+            ncnn::DataReaderFromMemory param_reader(param_ptr, sizeof(styletransfer_param_bin));
+            int ret0 = styletransfernet_gpu[i].load_param_bin(param_reader);
             int ret1 = styletransfernet_gpu[i].load_model(mgr, model_paths[i]);
 
             __android_log_print(ANDROID_LOG_DEBUG, "StyleTransferNcnn", "load %d %d", ret0, ret1);

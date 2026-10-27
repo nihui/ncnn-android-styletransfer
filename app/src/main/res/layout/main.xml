@@ -27,13 +27,6 @@
         android:text="变-gpu" />
     </LinearLayout>
 
-    <Spinner
-        android:id="@+id/spinnerGPU"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        android:entries="@array/gpu_array" />
-
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="fill_parent"
@@ -41,10 +34,18 @@
 
     <Spinner
         android:id="@+id/spinnerStyle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:drawSelectorOnTop="true"
         android:entries="@array/style_array" />
+    <Spinner
+        android:id="@+id/spinnerGPU"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:drawSelectorOnTop="true"
+        android:entries="@array/gpu_array" />
     </LinearLayout>
 
     <ImageView
